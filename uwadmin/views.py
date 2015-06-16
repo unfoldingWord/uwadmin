@@ -13,7 +13,7 @@ from account.mixins import LoginRequiredMixin
 from .forms import RecentComForm, ConnectionForm, OpenBibleStoryForm, PublishRequestForm
 from .models import Contact, OpenBibleStory, LangCode, PublishRequest
 from .signals import published
-from .tasks import send_request_email, approve_publish_request
+from .tasks import send_request_email, approve_publish_request, notify_requestor_rejected
 
 
 @login_required
@@ -211,6 +211,8 @@ class PublishRequestDeleteView(LoginRequiredMixin, DeleteView):
 
     def delete(self, request, *args, **kwargs):
         messages.info(self.request, "Publish Request Rejected/Deleted")
+        pr = self.get_object()
+        notify_requestor_rejected(pr.pk)
         return super(PublishRequestDeleteView, self).delete(request, *args, **kwargs)
 
 

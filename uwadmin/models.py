@@ -167,6 +167,7 @@ class PublishRequest(models.Model):
     contributors = models.TextField(blank=True)
     created_at = models.DateTimeField(default=timezone.now)
     approved_at = models.DateTimeField(default=None, blank=True, null=True, db_index=True)
+    requestor_email = models.EmailField(blank=True, default="", help_text="email address to be notified of request status")
 
     def __str__(self):
         return "({0}) for {1} in language: {2}".format(str(self.pk), str(self.get_resource_display()), self.language)

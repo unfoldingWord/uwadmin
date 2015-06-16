@@ -16,13 +16,49 @@ def publish(langcode):
 
 @task()
 def send_request_email(request_id):
+    notify_requestor_received.delay(request_id)
     pr = PublishRequest.objects.get(pk=request_id)
-    html_contents = render_to_string("./uwadmin/email_html_publishrequest.html", {"publish_request": pr})
-    plain_contents = render_to_string("./uwadmin/email_plain_publishrequest.html", {"publish_request": pr})
+    html_contents = render_to_string("./email/publishrequest_notify_html.html", {"publish_request": pr})
+    plain_contents = render_to_string("./email/publishrequest_notify_plain.html", {"publish_request": pr})
     send_mail("Publish Request #{0}".format(str(pr.pk)),
               plain_contents,
               settings.EMAIL_FROM,
               settings.EMAIL_NOTIFY_LIST,
+              html_message=html_contents)
+
+
+@task()
+def notify_requestor_received(request_id):
+    pr = PublishRequest.objects.get(pk=request_id)
+    html_contents = render_to_string("./email/notify_requestor_received_html.html", {"publish_request": pr})
+    plain_contents = render_to_string("./email/notify_requestor_received_plain.html", {"publish_request": pr})
+    send_mail("Publish Request #{0} Received".format(str(pr.pk)),
+              plain_contents,
+              settings.EMAIL_FROM,
+              [pr.requestor_email],
+              html_message=html_contents)
+
+
+@task()
+def notify_requestor_approved(request_id):
+    pr = PublishRequest.objects.get(pk=request_id)
+    html_contents = render_to_string("./email/notify_requestor_approved_html.html", {"publish_request": pr})
+    plain_contents = render_to_string("./email/notify_requestor_approved_plain.html", {"publish_request": pr})
+    send_mail("Publish Request #{0} Approved".format(str(pr.pk)),
+              plain_contents,
+              settings.EMAIL_FROM,
+              [pr.requestor_email],
+              html_message=html_contents)
+
+
+def notify_requestor_rejected(request_id):
+    pr = PublishRequest.objects.get(pk=request_id)
+    html_contents = render_to_string("./email/notify_requestor_rejected_html.html", {"publish_request": pr})
+    plain_contents = render_to_string("./email/notify_requestor_rejected_plain.html", {"publish_request": pr})
+    send_mail("Publish Request #{0} Rejected".format(str(pr.pk)),
+              plain_contents,
+              settings.EMAIL_FROM,
+              [pr.requestor_email],
               html_message=html_contents)
 
 
@@ -43,9 +79,12 @@ def approve_publish_request(request_id, user_id):
     obs.source_text = pr.source_text
     obs.source_version = pr.source_version
     obs.version = _compute_version(pr.source_version)
-    obs.notes = "requestor: " + pr.requestor
+    obs.notes = "requestor: {0}\ncontributors: {1}".format(pr.requestor, pr.contributors)
     obs.date_started = pr.created_at.date()
     obs.save()
     pr.approved_at = datetime.now()
     pr.save()
+    notify_requestor_approved.delay(pr.pk)
     return obs.pk
+
+

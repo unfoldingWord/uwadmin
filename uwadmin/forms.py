@@ -124,6 +124,7 @@ class PublishRequestForm(forms.ModelForm):
         model = PublishRequest
         fields = [
             "requestor",
+            "requestor_email",
             "resource",
             "language",
             "source_text",
